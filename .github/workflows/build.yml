@@ -20,6 +20,8 @@ jobs:
 
       - uses: actions/checkout@v2
 
+      - run: exit 1
+
       - name: Ontrack setup
         uses: ./
         id: ontrack
