@@ -15,6 +15,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
-      
+      - uses: actions/checkout@v4
+      - uses: ./
+        with:
+          url: ${{ vars.ONTRACK_URL }}
+          token: ${{ secrets.ONTRACK_TOKEN }}
+          config: github.com
+          indexation: 120
