@@ -52,8 +52,11 @@ async function setup() {
     console.log(`For OS platform: ${osPlatform}`);
     console.log(`For OS arch: ${osArch}`);
 
+    const majorVersion = parseInt(version.split(".").at(0), 10);
+    const cliName = majorVersion >= 5 ? "yontrack" : "ontrack";
+
     // Getting the URL to the CLI
-    const downloadUrl = `https://github.com/nemerosa/ontrack-cli/releases/download/${version}/ontrack-cli-${osPlatform}-${osArch}`;
+    const downloadUrl = `https://github.com/nemerosa/ontrack-cli/releases/download/${version}/${cliName}-cli-${osPlatform}-${osArch}`;
     console.log(`Downloading CLI from ${downloadUrl}`);
 
     // Downloading
