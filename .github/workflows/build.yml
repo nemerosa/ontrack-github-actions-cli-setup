@@ -22,3 +22,4 @@ jobs:
           token: ${{ secrets.ONTRACK_TOKEN }}
           config: github.com
           indexation: 120
+          github-token: ${{ github.token }}
