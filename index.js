@@ -37,11 +37,15 @@ async function setup() {
             throw "GitHub token must be provided in order to get the latest version of the CLI."
         }
         const octokit = github.getOctokit(githubToken)
-        const release = await octokit.rest.repos.getLatestRelease({
+        const releases = await octokit.rest.repos.listReleases({
             owner: "nemerosa",
             repo: "ontrack-cli"
         })
-        version = release.data.name
+        const nonDraftRelease = releases.data.find(release => !release.draft)
+        if (!nonDraftRelease) {
+            throw "No non-draft release found for ontrack-cli"
+        }
+        version = nonDraftRelease.name
     }
     console.log(`Using version: ${version}`);
     core.setOutput('installed', version);
