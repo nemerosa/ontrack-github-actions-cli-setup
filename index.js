@@ -41,7 +41,7 @@ async function setup() {
             owner: "nemerosa",
             repo: "ontrack-cli"
         })
-        const release = releases.data.find(release => !release.prerelease)
+        const release = releases.data.find(release => !release.draft && !release.prerelease)
         if (!release) {
             throw "No release found for ontrack-cli"
         }
