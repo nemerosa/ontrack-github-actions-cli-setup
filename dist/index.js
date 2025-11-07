@@ -19066,11 +19066,11 @@ async function setup() {
             owner: "nemerosa",
             repo: "ontrack-cli"
         })
-        const nonDraftRelease = releases.data.find(release => !release.draft)
-        if (!nonDraftRelease) {
-            throw "No non-draft release found for ontrack-cli"
+        const release = releases.data.find(release => !release.prerelease)
+        if (!release) {
+            throw "No release found for ontrack-cli"
         }
-        version = nonDraftRelease.name
+        version = release.name
     }
     console.log(`Using version: ${version}`);
     core.setOutput('installed', version);
