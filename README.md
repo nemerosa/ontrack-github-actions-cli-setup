@@ -81,6 +81,10 @@ Optional value to override max wait time between connection retry attempts. If n
 
 Branch name in Yontrack, defaults to the branch derived from the `github.ref`
 
+### `config-file-path`
+
+Optional Yontrack configuration file path. If not set, default is yontrack-config.yaml in the current directory.
+
 ## Outputs
 
 ### `installed`

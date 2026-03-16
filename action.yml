@@ -99,6 +99,10 @@ inputs:
     description: Overrides branch name calculated from github.ref
     required: false
     default: ""
+  config-file-path:
+    description: Path of the Yontrack configuration file
+    required: false
+    default: ""
 outputs:
   installed:
     description: Version which was actually installed

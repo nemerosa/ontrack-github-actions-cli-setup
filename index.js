@@ -101,12 +101,13 @@ async function setup() {
     const token = core.getInput('token')
     const connRetryCount = core.getInput('conn-retry-count')
     const connRetryWait = core.getInput('conn-retry-wait')
+    const configFilePath = core.getInput('config-file-path')
     console.log(`Ontrack URL set to ${url}`)
     console.log(`Ontrack token set to ${token ? token.length : 0} characters`)
     if (url && token) {
         let name = core.getInput('name')
         if (!name) name = 'prod'
-        await configureCLI(url, token, name, cliDisabled, connRetryCount, connRetryWait)
+        await configureCLI(url, token, name, cliDisabled, connRetryCount, connRetryWait, configFilePath)
 
         // Name of the GitHub configuration in Ontrack
         const config = core.getInput('config')
@@ -116,13 +117,16 @@ async function setup() {
     }
 }
 
-async function configureCLI(url, token, name, cliDisabled, connRetryCount, connRetryWait) {
+async function configureCLI(url, token, name, cliDisabled, connRetryCount, connRetryWait, configFilePath) {
     let args = ['config', 'create', name, url, '--token', token]
     if (connRetryCount) {
         args.push('--conn-retry-count', connRetryCount)
     }
     if (connRetryWait) {
         args.push('--conn-retry-wait', connRetryWait)
+    }
+    if (configFilePath) {
+        args.push('--config', configFilePath)
     }
     await exec.exec('ontrack-cli', args)
     // Disabling the CLI
