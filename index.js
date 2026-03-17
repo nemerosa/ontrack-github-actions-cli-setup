@@ -112,7 +112,7 @@ async function setup() {
         // Name of the GitHub configuration in Ontrack
         const config = core.getInput('config')
         if (config) {
-            await configureProject(config, project, branch)
+            await configureProject(config, project, branch, configFilePath)
         }
     }
 }
@@ -125,17 +125,14 @@ async function configureCLI(url, token, name, cliDisabled, connRetryCount, connR
     if (connRetryWait) {
         args.push('--conn-retry-wait', connRetryWait)
     }
-    if (configFilePath) {
-        args.push('--config', configFilePath)
-    }
-    await exec.exec('ontrack-cli', args)
+    await exec.exec('ontrack-cli', argsWithConfig(args, configFilePath))
     // Disabling the CLI
     if (cliDisabled) {
-        await exec.exec('ontrack-cli', ['config', 'disable', name])
+        await exec.exec('ontrack-cli', argsWithConfig(['config', 'disable', name], configFilePath))
     }
 }
 
-async function configureProject(config, project, branch) {
+async function configureProject(config, project, branch, configFilePath) {
     console.log(`Configuring branch for config ${config}...`)
 
     // GitHub context
@@ -163,7 +160,7 @@ async function configureProject(config, project, branch) {
             setupArgs.push("--auto-create-pl=false")
         }
 
-        await exec.exec('ontrack-cli', setupArgs)
+        await exec.exec('ontrack-cli', argsWithConfig(setupArgs, configFilePath))
 
         let indexation = core.getInput('indexation');
         if (!indexation) indexation = 0
@@ -171,14 +168,14 @@ async function configureProject(config, project, branch) {
         let issueService = core.getInput('issue-service')
         if (!issueService) issueService = 'self'
 
-        await exec.exec('ontrack-cli', ['project', 'set-property', '--project', project, 'github', '--configuration', config, '--repository', `${context.repo.owner}/${context.repo.repo}`, '--indexation', indexation, '--issue-service', issueService])
-        await exec.exec('ontrack-cli', ['branch', 'set-property', '--project', project, '--branch', branch, 'git', '--git-branch', branch])
+        await exec.exec('ontrack-cli', argsWithConfig(['project', 'set-property', '--project', project, 'github', '--configuration', config, '--repository', `${context.repo.owner}/${context.repo.repo}`, '--indexation', indexation, '--issue-service', issueService], configFilePath))
+        await exec.exec('ontrack-cli', argsWithConfig(['branch', 'set-property', '--project', project, '--branch', branch, 'git', '--git-branch', branch], configFilePath))
 
-        await configureAutoPromotion(project, branch)
+        await configureAutoPromotion(project, branch, configFilePath)
     }
 }
 
-async function configureAutoPromotion(project, branch) {
+async function configureAutoPromotion(project, branch, configFilePath) {
     const promotionsPath = core.getInput("promotions")
     if (promotionsPath) {
         // Reads the file as YAML
@@ -200,11 +197,11 @@ async function configureAutoPromotion(project, branch) {
         }
         // Creates all the validations
         await validations.forEach(validation => {
-            exec.exec('ontrack-cli', ['validation', 'setup', 'generic', '--project', project, '--branch', branch, '--validation', validation])
+            exec.exec('ontrack-cli', argsWithConfig(['validation', 'setup', 'generic', '--project', project, '--branch', branch, '--validation', validation], configFilePath))
         })
         // Creates all the promotions
         await promotions.forEach(promotion => {
-            exec.exec('ontrack-cli', ['promotion', 'setup', '--project', project, '--branch', branch, '--promotion', promotion])
+            exec.exec('ontrack-cli', argsWithConfig(['promotion', 'setup', '--project', project, '--branch', branch, '--promotion', promotion], configFilePath))
         })
         // Auto promotion setup
         for (const promotion in yaml) {
@@ -221,7 +218,7 @@ async function configureAutoPromotion(project, branch) {
                         setupArgs.push('--depends-on', promotion)
                     })
                 }
-                await exec.exec('ontrack-cli', setupArgs)
+                await exec.exec('ontrack-cli', argsWithConfig(setupArgs, configFilePath))
             }
         }
     }
@@ -265,4 +262,11 @@ function mapOS(os) {
         win32: 'windows'
     };
     return mappings[os] || os;
+}
+
+function argsWithConfig(args, configFilePath) {
+    if (configFilePath) {
+        return [...args, '--config', configFilePath]
+    }
+    return args
 }
