@@ -237,10 +237,10 @@ module.exports = {
 
 if (process.env.NODE_ENV !== 'test') {
     (async () => {
-        const core = (await import('@actions/core')).default;
-        const execDep = (await import('@actions/exec')).default;
-        const github = (await import('@actions/github')).default;
-        const tc = (await import('@actions/tool-cache')).default;
+        const core = await import('@actions/core');
+        const execDep = await import('@actions/exec');
+        const github = await import('@actions/github');
+        const tc = await import('@actions/tool-cache');
         try {
             await runAction({ core, exec: execDep, github, tc });
         } catch (error) {
