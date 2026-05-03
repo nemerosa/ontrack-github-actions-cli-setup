@@ -11,7 +11,18 @@ esbuild.build({
     sourcemap: true,
     plugins: [license({
         thirdParty: {
-            output: 'dist/licenses.txt',
+            output: {
+                file: 'dist/licenses.txt',
+                template(dependencies) {
+                    return dependencies
+                        .map(dep => [
+                            dep.packageJson.name,
+                            dep.packageJson.license,
+                            dep.licenseText,
+                        ].filter(Boolean).join('\n'))
+                        .join('\n\n');
+                },
+            },
         },
     })],
 }).catch((err) => {
