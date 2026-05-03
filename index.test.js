@@ -1,3 +1,15 @@
+jest.mock('fs', () => {
+    const actual = jest.requireActual('fs');
+    return {
+        ...actual,
+        promises: {
+            ...actual.promises,
+            chmod: jest.fn().mockResolvedValue(undefined),
+            rename: jest.fn().mockResolvedValue(undefined),
+        },
+    };
+});
+
 const {
     runAction,
     configureCLI,

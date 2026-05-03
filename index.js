@@ -193,25 +193,16 @@ async function downloadAndSetup({ tc, core, downloadUrl }) {
     const cliPath = await tc.downloadTool(downloadUrl);
     console.log(`Downloaded at ${cliPath}`);
 
+    if (!os.platform().startsWith('win')) {
+        await fs.promises.chmod(cliPath, '766');
+    }
+
     const dir = path.dirname(cliPath);
     console.log(`Directory is ${dir}`);
 
     const exeSuffix = os.platform().startsWith('win') ? '.exe' : '';
-    const destPath = [dir, `ontrack-cli${exeSuffix}`].join(path.sep);
 
-    if (!os.platform().startsWith('win')) {
-        try {
-            await fs.promises.chmod(cliPath, '766');
-        } catch (e) {
-            console.log(`chmod skipped: ${e.message}`);
-        }
-    }
-
-    try {
-        await fs.promises.rename(cliPath, destPath);
-    } catch (e) {
-        console.log(`rename skipped: ${e.message}`);
-    }
+    await fs.promises.rename(cliPath, [dir, `ontrack-cli${exeSuffix}`].join(path.sep));
 
     core.addPath(dir);
 }
