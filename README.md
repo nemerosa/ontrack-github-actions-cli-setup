@@ -153,5 +153,11 @@ npm install
 To build the distribution:
 
 ```bash
-ncc build
+npm run build
+```
+
+This runs `node build.js`, which invokes esbuild with `esbuild-plugin-license` to produce `dist/index.js` (the bundle the action runner executes) and `dist/licenses.txt` (license attributions). To run lint, build, and tests in one go:
+
+```bash
+npm run all
 ```
