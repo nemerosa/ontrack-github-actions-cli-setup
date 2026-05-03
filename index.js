@@ -49,7 +49,7 @@ async function runAction({ core, exec, github, tc }) {
     core.setOutput('project', project);
     console.log(`Ontrack project = ${project}`);
 
-    let branch = '';
+    let branch;
     const branchOverride = core.getInput('branch');
     if (branchOverride) {
         branch = branchOverride;
