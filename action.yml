@@ -111,5 +111,5 @@ outputs:
   branch:
     description: Ontrack branch name
 runs:
-  using: 'node16'
+  using: 'node24'
   main: 'dist/index.js'
