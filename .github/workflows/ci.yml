@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency: "ci-${{ github.ref }}"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.x
+
+      - run: npm ci
+
+      - run: npm run lint
+
+      - run: npm run build
+
+      - run: npm test
+
+      - name: Self-test (CLI setup)
+        if: github.repository_owner == 'nemerosa'
+        uses: ./
+        with:
+          url: ${{ vars.ONTRACK_URL }}
+          token: ${{ secrets.ONTRACK_TOKEN }}
+          config: github.com
+          indexation: 120
+          github-token: ${{ github.token }}
+          auto-validation-stamps: true
+          auto-promotion-levels: true
+          promotions: ./.github/ontrack/promotions.yml
+
+      - name: Semantic release
+        id: release
+        if: ${{ github.ref == 'refs/heads/main' }}
+        run: |
+          npx semantic-release
+          VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update floating major/minor tags
+        if: ${{ github.ref == 'refs/heads/main' && steps.release.outputs.version != '' }}
+        run: |
+          VERSION="${{ steps.release.outputs.version }}"
+          [[ "$VERSION" =~ ^v([0-9]+)\.([0-9]+)\.[0-9]+$ ]] || exit 0
+          MAJOR="v${BASH_REMATCH[1]}"
+          MINOR="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}"
+          git tag -f "$MAJOR" "$VERSION"
+          git tag -f "$MINOR" "$VERSION"
+          git push origin -f "$MAJOR" "$MINOR"
