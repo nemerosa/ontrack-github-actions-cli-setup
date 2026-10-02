@@ -95,6 +95,18 @@ inputs:
     description: Max connection retry wait time between attempts in seconds
     required: false
     default: ""
+  download-retry-count:
+    description: |
+      Number of extra attempts to download the CLI when the download fails.
+
+      Each attempt already includes the 3 tries made by @actions/tool-cache.
+      Client errors (4xx, except 408 and 429) are not retried.
+    required: false
+    default: "0"
+  download-retry-wait:
+    description: Wait time in seconds between the extra download attempts
+    required: false
+    default: "30"
   branch:
     description: Overrides branch name calculated from github.ref
     required: false

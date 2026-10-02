@@ -4938,14 +4938,14 @@ var require_util = __commonJS({
         }
         const port = url.port != null ? url.port : url.protocol === "https:" ? 443 : 80;
         let origin = url.origin != null ? url.origin : `${url.protocol || ""}//${url.hostname || ""}:${port}`;
-        let path8 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
+        let path7 = url.path != null ? url.path : `${url.pathname || ""}${url.search || ""}`;
         if (origin[origin.length - 1] === "/") {
           origin = origin.slice(0, origin.length - 1);
         }
-        if (path8 && path8[0] !== "/") {
-          path8 = `/${path8}`;
+        if (path7 && path7[0] !== "/") {
+          path7 = `/${path7}`;
         }
-        return new URL(`${origin}${path8}`);
+        return new URL(`${origin}${path7}`);
       }
       if (!isHttpOrHttpsPrefixed(url.origin || url.protocol)) {
         throw new InvalidArgumentError("Invalid URL protocol: the URL must start with `http:` or `https:`.");
@@ -5396,39 +5396,39 @@ var require_diagnostics = __commonJS({
       });
       diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin }
+          request: { method, path: path7, origin }
         } = evt;
-        debuglog("sending request to %s %s/%s", method, origin, path8);
+        debuglog("sending request to %s %s/%s", method, origin, path7);
       });
       diagnosticsChannel.channel("undici:request:headers").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin },
+          request: { method, path: path7, origin },
           response: { statusCode }
         } = evt;
         debuglog(
           "received response to %s %s/%s - HTTP %d",
           method,
           origin,
-          path8,
+          path7,
           statusCode
         );
       });
       diagnosticsChannel.channel("undici:request:trailers").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin }
+          request: { method, path: path7, origin }
         } = evt;
-        debuglog("trailers received from %s %s/%s", method, origin, path8);
+        debuglog("trailers received from %s %s/%s", method, origin, path7);
       });
       diagnosticsChannel.channel("undici:request:error").subscribe((evt) => {
         const {
-          request: { method, path: path8, origin },
+          request: { method, path: path7, origin },
           error: error2
         } = evt;
         debuglog(
           "request to %s %s/%s errored - %s",
           method,
           origin,
-          path8,
+          path7,
           error2.message
         );
       });
@@ -5477,9 +5477,9 @@ var require_diagnostics = __commonJS({
         });
         diagnosticsChannel.channel("undici:client:sendHeaders").subscribe((evt) => {
           const {
-            request: { method, path: path8, origin }
+            request: { method, path: path7, origin }
           } = evt;
-          debuglog("sending request to %s %s/%s", method, origin, path8);
+          debuglog("sending request to %s %s/%s", method, origin, path7);
         });
       }
       diagnosticsChannel.channel("undici:websocket:open").subscribe((evt) => {
@@ -5542,7 +5542,7 @@ var require_request = __commonJS({
     var kHandler = /* @__PURE__ */ Symbol("handler");
     var Request = class {
       constructor(origin, {
-        path: path8,
+        path: path7,
         method,
         body,
         headers,
@@ -5557,11 +5557,11 @@ var require_request = __commonJS({
         expectContinue,
         servername
       }, handler2) {
-        if (typeof path8 !== "string") {
+        if (typeof path7 !== "string") {
           throw new InvalidArgumentError("path must be a string");
-        } else if (path8[0] !== "/" && !(path8.startsWith("http://") || path8.startsWith("https://")) && method !== "CONNECT") {
+        } else if (path7[0] !== "/" && !(path7.startsWith("http://") || path7.startsWith("https://")) && method !== "CONNECT") {
           throw new InvalidArgumentError("path must be an absolute URL or start with a slash");
-        } else if (invalidPathRegex.test(path8)) {
+        } else if (invalidPathRegex.test(path7)) {
           throw new InvalidArgumentError("invalid request path");
         }
         if (typeof method !== "string") {
@@ -5627,7 +5627,7 @@ var require_request = __commonJS({
         this.completed = false;
         this.aborted = false;
         this.upgrade = upgrade || null;
-        this.path = query ? buildURL(path8, query) : path8;
+        this.path = query ? buildURL(path7, query) : path7;
         this.origin = origin;
         this.idempotent = idempotent == null ? method === "HEAD" || method === "GET" : idempotent;
         this.blocking = blocking == null ? false : blocking;
@@ -10153,7 +10153,7 @@ var require_client_h1 = __commonJS({
       return method !== "GET" && method !== "HEAD" && method !== "OPTIONS" && method !== "TRACE" && method !== "CONNECT";
     }
     function writeH1(client, request2) {
-      const { method, path: path8, host, upgrade, blocking, reset } = request2;
+      const { method, path: path7, host, upgrade, blocking, reset } = request2;
       let { body, headers, contentLength } = request2;
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH" || method === "QUERY" || method === "PROPFIND" || method === "PROPPATCH";
       if (util2.isFormDataLike(body)) {
@@ -10219,7 +10219,7 @@ var require_client_h1 = __commonJS({
       if (blocking) {
         socket[kBlocking] = true;
       }
-      let header = `${method} ${path8} HTTP/1.1\r
+      let header = `${method} ${path7} HTTP/1.1\r
 `;
       if (typeof host === "string") {
         header += `host: ${host}\r
@@ -10745,7 +10745,7 @@ var require_client_h2 = __commonJS({
     }
     function writeH2(client, request2) {
       const session = client[kHTTP2Session];
-      const { method, path: path8, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
+      const { method, path: path7, host, upgrade, expectContinue, signal, headers: reqHeaders } = request2;
       let { body } = request2;
       if (upgrade) {
         util2.errorRequest(client, request2, new Error("Upgrade not supported for H2"));
@@ -10812,7 +10812,7 @@ var require_client_h2 = __commonJS({
         });
         return true;
       }
-      headers[HTTP2_HEADER_PATH] = path8;
+      headers[HTTP2_HEADER_PATH] = path7;
       headers[HTTP2_HEADER_SCHEME] = "https";
       const expectsPayload = method === "PUT" || method === "POST" || method === "PATCH";
       if (body && typeof body.read === "function") {
@@ -11165,9 +11165,9 @@ var require_redirect_handler = __commonJS({
           return this.handler.onHeaders(statusCode, headers, resume, statusText);
         }
         const { origin, pathname, search } = util2.parseURL(new URL(this.location, this.opts.origin && new URL(this.opts.path, this.opts.origin)));
-        const path8 = search ? `${pathname}${search}` : pathname;
+        const path7 = search ? `${pathname}${search}` : pathname;
         this.opts.headers = cleanRequestHeaders(this.opts.headers, statusCode === 303, this.opts.origin !== origin);
-        this.opts.path = path8;
+        this.opts.path = path7;
         this.opts.origin = origin;
         this.opts.maxRedirections = 0;
         this.opts.query = null;
@@ -12402,10 +12402,10 @@ var require_proxy_agent = __commonJS({
         };
         const {
           origin,
-          path: path8 = "/",
+          path: path7 = "/",
           headers = {}
         } = opts;
-        opts.path = origin + path8;
+        opts.path = origin + path7;
         if (!("host" in headers) && !("Host" in headers)) {
           const { host } = new URL2(origin);
           headers.host = host;
@@ -14326,20 +14326,20 @@ var require_mock_utils = __commonJS({
       }
       return true;
     }
-    function safeUrl(path8) {
-      if (typeof path8 !== "string") {
-        return path8;
+    function safeUrl(path7) {
+      if (typeof path7 !== "string") {
+        return path7;
       }
-      const pathSegments = path8.split("?");
+      const pathSegments = path7.split("?");
       if (pathSegments.length !== 2) {
-        return path8;
+        return path7;
       }
       const qp = new URLSearchParams(pathSegments.pop());
       qp.sort();
       return [...pathSegments, qp.toString()].join("?");
     }
-    function matchKey(mockDispatch2, { path: path8, method, body, headers }) {
-      const pathMatch = matchValue(mockDispatch2.path, path8);
+    function matchKey(mockDispatch2, { path: path7, method, body, headers }) {
+      const pathMatch = matchValue(mockDispatch2.path, path7);
       const methodMatch = matchValue(mockDispatch2.method, method);
       const bodyMatch = typeof mockDispatch2.body !== "undefined" ? matchValue(mockDispatch2.body, body) : true;
       const headersMatch = matchHeaders(mockDispatch2, headers);
@@ -14361,7 +14361,7 @@ var require_mock_utils = __commonJS({
     function getMockDispatch(mockDispatches, key) {
       const basePath = key.query ? buildURL(key.path, key.query) : key.path;
       const resolvedPath = typeof basePath === "string" ? safeUrl(basePath) : basePath;
-      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path8 }) => matchValue(safeUrl(path8), resolvedPath));
+      let matchedMockDispatches = mockDispatches.filter(({ consumed }) => !consumed).filter(({ path: path7 }) => matchValue(safeUrl(path7), resolvedPath));
       if (matchedMockDispatches.length === 0) {
         throw new MockNotMatchedError(`Mock dispatch not matched for path '${resolvedPath}'`);
       }
@@ -14399,9 +14399,9 @@ var require_mock_utils = __commonJS({
       }
     }
     function buildKey(opts) {
-      const { path: path8, method, body, headers, query } = opts;
+      const { path: path7, method, body, headers, query } = opts;
       return {
-        path: path8,
+        path: path7,
         method,
         body,
         headers,
@@ -14864,10 +14864,10 @@ var require_pending_interceptors_formatter = __commonJS({
       }
       format(pendingInterceptors) {
         const withPrettyHeaders = pendingInterceptors.map(
-          ({ method, path: path8, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
+          ({ method, path: path7, data: { statusCode }, persist, times, timesInvoked, origin }) => ({
             Method: method,
             Origin: origin,
-            Path: path8,
+            Path: path7,
             "Status code": statusCode,
             Persistent: persist ? PERSISTENT : NOT_PERSISTENT,
             Invocations: timesInvoked,
@@ -19748,9 +19748,9 @@ var require_util6 = __commonJS({
         }
       }
     }
-    function validateCookiePath(path8) {
-      for (let i = 0; i < path8.length; ++i) {
-        const code = path8.charCodeAt(i);
+    function validateCookiePath(path7) {
+      for (let i = 0; i < path7.length; ++i) {
+        const code = path7.charCodeAt(i);
         if (code < 32 || // exclude CTLs (0-31)
         code === 127 || // DEL
         code === 59) {
@@ -22427,11 +22427,11 @@ var require_undici = __commonJS({
           if (typeof opts.path !== "string") {
             throw new InvalidArgumentError("invalid opts.path");
           }
-          let path8 = opts.path;
+          let path7 = opts.path;
           if (!opts.path.startsWith("/")) {
-            path8 = `/${path8}`;
+            path7 = `/${path7}`;
           }
-          url = new URL(util2.parseOrigin(url).origin + path8);
+          url = new URL(util2.parseOrigin(url).origin + path7);
         } else {
           if (!opts) {
             opts = typeof url === "object" ? url : {};
@@ -24782,8 +24782,8 @@ var init_context = __esm({
           if ((0, import_fs2.existsSync)(process.env.GITHUB_EVENT_PATH)) {
             this.payload = JSON.parse((0, import_fs2.readFileSync)(process.env.GITHUB_EVENT_PATH, { encoding: "utf8" }));
           } else {
-            const path8 = process.env.GITHUB_EVENT_PATH;
-            process.stdout.write(`GITHUB_EVENT_PATH ${path8} does not exist${import_os3.EOL}`);
+            const path7 = process.env.GITHUB_EVENT_PATH;
+            process.stdout.write(`GITHUB_EVENT_PATH ${path7} does not exist${import_os3.EOL}`);
           }
         }
         this.eventName = process.env.GITHUB_EVENT_NAME;
@@ -32153,8 +32153,9 @@ var init_tool_cache = __esm({
 // index.js
 var os8 = require("os");
 var fs5 = require("fs");
-var path7 = require("path");
 var readYaml = require_read_yaml_promise();
+var CLI_TOOL_NAME = "ontrack-cli";
+var DEFAULT_DOWNLOAD_RETRY_WAIT = 30;
 async function runAction({ core, exec: exec2, github, tc }) {
   const onlyFor = core.getInput("only-for");
   const cliDisabled = onlyFor && onlyFor !== github.context.repo.owner;
@@ -32188,9 +32189,10 @@ async function runAction({ core, exec: exec2, github, tc }) {
   console.log(`For OS arch: ${osArch}`);
   const majorVersion = parseInt(version.split(".").at(0), 10);
   const cliName = majorVersion >= 5 ? "yontrack" : "ontrack-cli";
+  const downloadRetryCount = parseNonNegativeIntInput(core, "download-retry-count", 0);
+  const downloadRetryWait = parseNonNegativeIntInput(core, "download-retry-wait", DEFAULT_DOWNLOAD_RETRY_WAIT);
   const downloadUrl = `https://github.com/nemerosa/ontrack-cli/releases/download/${version}/${cliName}-${osPlatform}-${osArch}`;
-  console.log(`Downloading CLI from ${downloadUrl}`);
-  await downloadAndSetup({ tc, core, downloadUrl });
+  await downloadAndSetup({ tc, core, downloadUrl, version, retryCount: downloadRetryCount, retryWait: downloadRetryWait });
   const project = github.context.repo.repo;
   core.setOutput("project", project);
   console.log(`Ontrack project = ${project}`);
@@ -32319,17 +32321,54 @@ async function configureAutoPromotion({ core, exec: exec2, project, branch, conf
     }
   }
 }
-async function downloadAndSetup({ tc, core, downloadUrl }) {
-  const cliPath = await tc.downloadTool(downloadUrl);
+async function downloadAndSetup({ tc, core, downloadUrl, version, retryCount = 0, retryWait = DEFAULT_DOWNLOAD_RETRY_WAIT, sleep = sleepSeconds }) {
+  const cachedDir = tc.isExplicitVersion(version) ? tc.find(CLI_TOOL_NAME, version) : "";
+  if (cachedDir) {
+    console.log(`Reusing CLI ${version} from the tool cache at ${cachedDir}`);
+    core.addPath(cachedDir);
+    return;
+  }
+  console.log(`Downloading CLI from ${downloadUrl}`);
+  const cliPath = await downloadWithRetry({ tc, downloadUrl, retryCount, retryWait, sleep });
   console.log(`Downloaded at ${cliPath}`);
   if (!os8.platform().startsWith("win")) {
     await fs5.promises.chmod(cliPath, "766");
   }
-  const dir = path7.dirname(cliPath);
-  console.log(`Directory is ${dir}`);
   const exeSuffix = os8.platform().startsWith("win") ? ".exe" : "";
-  await fs5.promises.rename(cliPath, [dir, `ontrack-cli${exeSuffix}`].join(path7.sep));
+  const dir = await tc.cacheFile(cliPath, `${CLI_TOOL_NAME}${exeSuffix}`, CLI_TOOL_NAME, version);
+  console.log(`Cached at ${dir}`);
   core.addPath(dir);
+}
+async function downloadWithRetry({ tc, downloadUrl, retryCount, retryWait, sleep }) {
+  for (let retry = 0; ; retry++) {
+    try {
+      return await tc.downloadTool(downloadUrl);
+    } catch (error2) {
+      if (retry >= retryCount || !isRetryableDownloadError(error2)) {
+        throw error2;
+      }
+      console.log(`Download failed: ${error2.message}`);
+      console.log(`Retrying download (${retry + 1}/${retryCount}) in ${retryWait} seconds...`);
+      await sleep(retryWait);
+    }
+  }
+}
+function isRetryableDownloadError(error2) {
+  const status = error2.httpStatusCode;
+  return !status || status >= 500 || status === 408 || status === 429;
+}
+function sleepSeconds(seconds) {
+  return new Promise((resolve2) => setTimeout(resolve2, seconds * 1e3));
+}
+function parseNonNegativeIntInput(core, name, defaultValue) {
+  const value = core.getInput(name);
+  if (!value) {
+    return defaultValue;
+  }
+  if (!/^\d+$/.test(value)) {
+    throw new Error(`Input ${name} must be a non-negative integer, got: ${value}`);
+  }
+  return parseInt(value, 10);
 }
 function mapArch(arch3) {
   const mappings = { x32: "386", x64: "amd64" };
