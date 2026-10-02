@@ -77,6 +77,14 @@ Optional value to override max connection retry attempts. If not set, default on
 
 Optional value to override max wait time between connection retry attempts. If not set, default ontrack-cli behavior applies. 
 
+### `download-retry-count`
+
+Number of extra attempts to download the CLI when the download fails (for example during a short GitHub outage). Each attempt already includes the 3 tries made by `@actions/tool-cache`. Client errors (4xx, except 408 and 429) are not retried. Defaults to `0` (no extra attempt).
+
+### `download-retry-wait`
+
+Wait time, in seconds, between the extra download attempts. Defaults to `30`.
+
 ### `branch`
 
 Branch name in Yontrack, defaults to the branch derived from the `github.ref`
@@ -84,6 +92,12 @@ Branch name in Yontrack, defaults to the branch derived from the `github.ref`
 ### `config-file-path`
 
 Optional Yontrack configuration file path. If not set, default is yontrack-config.yaml in the current directory.
+
+## Tool cache
+
+The downloaded CLI is stored in the runner tool cache under the `ontrack-cli` name and the CLI version. When the requested version is already in the tool cache (for example on a self-hosted runner which has run this action before), the download is skipped.
+
+This lookup only applies to an exact version (like `5.9.0`). To pre-install the CLI in a runner image, put the binary at `$RUNNER_TOOL_CACHE/ontrack-cli/<version>/<arch>/ontrack-cli` (`ontrack-cli.exe` on Windows), where `<arch>` is the Node.js `os.arch()` value (`x64`, `arm64`...), and create an empty `$RUNNER_TOOL_CACHE/ontrack-cli/<version>/<arch>.complete` file.
 
 ## Outputs
 

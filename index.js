@@ -1,7 +1,10 @@
 const os = require('os');
 const fs = require('fs');
-const path = require('path');
 const readYaml = require('read-yaml-promise');
+
+// Name of the installed binary and of its tool cache entry (not the release asset name)
+const CLI_TOOL_NAME = 'ontrack-cli';
+const DEFAULT_DOWNLOAD_RETRY_WAIT = 30;
 
 async function runAction({ core, exec, github, tc }) {
     const onlyFor = core.getInput('only-for');
@@ -40,10 +43,12 @@ async function runAction({ core, exec, github, tc }) {
     const majorVersion = parseInt(version.split(".").at(0), 10);
     const cliName = majorVersion >= 5 ? "yontrack" : "ontrack-cli";
 
-    const downloadUrl = `https://github.com/nemerosa/ontrack-cli/releases/download/${version}/${cliName}-${osPlatform}-${osArch}`;
-    console.log(`Downloading CLI from ${downloadUrl}`);
+    const downloadRetryCount = parseNonNegativeIntInput(core, 'download-retry-count', 0);
+    const downloadRetryWait = parseNonNegativeIntInput(core, 'download-retry-wait', DEFAULT_DOWNLOAD_RETRY_WAIT);
 
-    await downloadAndSetup({ tc, core, downloadUrl });
+    const downloadUrl = `https://github.com/nemerosa/ontrack-cli/releases/download/${version}/${cliName}-${osPlatform}-${osArch}`;
+
+    await downloadAndSetup({ tc, core, downloadUrl, version, retryCount: downloadRetryCount, retryWait: downloadRetryWait });
 
     const project = github.context.repo.repo;
     core.setOutput('project', project);
@@ -189,22 +194,66 @@ async function configureAutoPromotion({ core, exec, project, branch, configFileP
     }
 }
 
-async function downloadAndSetup({ tc, core, downloadUrl }) {
-    const cliPath = await tc.downloadTool(downloadUrl);
+async function downloadAndSetup({ tc, core, downloadUrl, version, retryCount = 0, retryWait = DEFAULT_DOWNLOAD_RETRY_WAIT, sleep = sleepSeconds }) {
+    // tc.find treats a partial version such as "5" as a range, which could pick any cached 5.x.y
+    const cachedDir = tc.isExplicitVersion(version) ? tc.find(CLI_TOOL_NAME, version) : '';
+    if (cachedDir) {
+        console.log(`Reusing CLI ${version} from the tool cache at ${cachedDir}`);
+        core.addPath(cachedDir);
+        return;
+    }
+
+    console.log(`Downloading CLI from ${downloadUrl}`);
+    const cliPath = await downloadWithRetry({ tc, downloadUrl, retryCount, retryWait, sleep });
     console.log(`Downloaded at ${cliPath}`);
 
     if (!os.platform().startsWith('win')) {
         await fs.promises.chmod(cliPath, '766');
     }
 
-    const dir = path.dirname(cliPath);
-    console.log(`Directory is ${dir}`);
-
     const exeSuffix = os.platform().startsWith('win') ? '.exe' : '';
 
-    await fs.promises.rename(cliPath, [dir, `ontrack-cli${exeSuffix}`].join(path.sep));
+    const dir = await tc.cacheFile(cliPath, `${CLI_TOOL_NAME}${exeSuffix}`, CLI_TOOL_NAME, version);
+    console.log(`Cached at ${dir}`);
 
     core.addPath(dir);
+}
+
+// tc.downloadTool already makes 3 attempts on its own; these are extra rounds on top of it.
+async function downloadWithRetry({ tc, downloadUrl, retryCount, retryWait, sleep }) {
+    for (let retry = 0; ; retry++) {
+        try {
+            return await tc.downloadTool(downloadUrl);
+        } catch (error) {
+            if (retry >= retryCount || !isRetryableDownloadError(error)) {
+                throw error;
+            }
+            console.log(`Download failed: ${error.message}`);
+            console.log(`Retrying download (${retry + 1}/${retryCount}) in ${retryWait} seconds...`);
+            await sleep(retryWait);
+        }
+    }
+}
+
+// Same rule as tc.downloadTool: client errors won't fix themselves, except 408 and 429.
+function isRetryableDownloadError(error) {
+    const status = error.httpStatusCode;
+    return !status || status >= 500 || status === 408 || status === 429;
+}
+
+function sleepSeconds(seconds) {
+    return new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+}
+
+function parseNonNegativeIntInput(core, name, defaultValue) {
+    const value = core.getInput(name);
+    if (!value) {
+        return defaultValue;
+    }
+    if (!/^\d+$/.test(value)) {
+        throw new Error(`Input ${name} must be a non-negative integer, got: ${value}`);
+    }
+    return parseInt(value, 10);
 }
 
 function mapArch(arch) {

@@ -5,7 +5,6 @@ jest.mock('fs', () => {
         promises: {
             ...actual.promises,
             chmod: jest.fn().mockResolvedValue(undefined),
-            rename: jest.fn().mockResolvedValue(undefined),
         },
     };
 });
@@ -17,6 +16,7 @@ const {
     mapArch,
     mapOS,
     argsWithConfig,
+    downloadAndSetup,
 } = require('./index');
 
 function makeCore(inputs = {}) {
@@ -52,7 +52,12 @@ function makeGithub({
 }
 
 function makeTc(downloadResult = '/tmp/cli-download') {
-    return { downloadTool: jest.fn().mockResolvedValue(downloadResult) };
+    return {
+        downloadTool: jest.fn().mockResolvedValue(downloadResult),
+        find: jest.fn().mockReturnValue(''),
+        isExplicitVersion: jest.fn((version) => /^\d+\.\d+\.\d+$/.test(version)),
+        cacheFile: jest.fn().mockResolvedValue('/tool-cache/ontrack-cli/5.0.0/x64'),
+    };
 }
 
 describe('mapArch', () => {
@@ -262,5 +267,116 @@ describe('runAction — project output', () => {
         const tc = makeTc();
         await runAction({ core, exec: execDep, github, tc });
         expect(core.setOutput).toHaveBeenCalledWith('project', 'my-cool-repo');
+    });
+});
+
+describe('downloadAndSetup', () => {
+    test('reuses the CLI from the tool cache when the version is already there', async () => {
+        const core = makeCore();
+        const tc = makeTc();
+        tc.find.mockReturnValue('/tool-cache/ontrack-cli/5.9.0/x64');
+        await downloadAndSetup({ tc, core, downloadUrl: 'https://example/cli', version: '5.9.0' });
+        expect(tc.find).toHaveBeenCalledWith('ontrack-cli', '5.9.0');
+        expect(tc.downloadTool).not.toHaveBeenCalled();
+        expect(core.addPath).toHaveBeenCalledWith('/tool-cache/ontrack-cli/5.9.0/x64');
+    });
+
+    test('does not look in the tool cache when the version is not an exact one', async () => {
+        const core = makeCore();
+        const tc = makeTc();
+        tc.find.mockReturnValue('/tool-cache/ontrack-cli/5.9.0/x64');
+        await downloadAndSetup({ tc, core, downloadUrl: 'https://example/cli', version: '5' });
+        expect(tc.find).not.toHaveBeenCalled();
+        expect(tc.downloadTool).toHaveBeenCalledWith('https://example/cli');
+    });
+
+    test('downloads the CLI and stores it in the tool cache when it is not cached yet', async () => {
+        const core = makeCore();
+        const tc = makeTc('/tmp/cli-download');
+        tc.cacheFile.mockResolvedValue('/tool-cache/ontrack-cli/5.9.0/x64');
+        await downloadAndSetup({ tc, core, downloadUrl: 'https://example/cli', version: '5.9.0' });
+        expect(tc.downloadTool).toHaveBeenCalledWith('https://example/cli');
+        expect(tc.cacheFile).toHaveBeenCalledWith('/tmp/cli-download', expect.stringMatching(/^ontrack-cli(\.exe)?$/), 'ontrack-cli', '5.9.0');
+        expect(core.addPath).toHaveBeenCalledWith('/tool-cache/ontrack-cli/5.9.0/x64');
+    });
+
+    test('retries the download after a failure, waiting between attempts', async () => {
+        const core = makeCore();
+        const tc = makeTc('/tmp/cli-download');
+        tc.downloadTool
+            .mockRejectedValueOnce(new Error('socket hang up'))
+            .mockRejectedValueOnce(new Error('Unexpected HTTP response: 504'))
+            .mockResolvedValueOnce('/tmp/cli-download');
+        const sleep = jest.fn().mockResolvedValue(undefined);
+        await downloadAndSetup({ tc, core, downloadUrl: 'https://example/cli', version: '5.9.0', retryCount: 2, retryWait: 7, sleep });
+        expect(tc.downloadTool).toHaveBeenCalledTimes(3);
+        expect(sleep.mock.calls).toEqual([[7], [7]]);
+        expect(tc.cacheFile).toHaveBeenCalledWith('/tmp/cli-download', expect.any(String), 'ontrack-cli', '5.9.0');
+    });
+
+    test('fails with the last error once all retries are exhausted', async () => {
+        const core = makeCore();
+        const tc = makeTc();
+        tc.downloadTool.mockRejectedValue(new Error('Unexpected HTTP response: 504'));
+        const sleep = jest.fn().mockResolvedValue(undefined);
+        await expect(downloadAndSetup({ tc, core, downloadUrl: 'https://example/cli', version: '5.9.0', retryCount: 2, retryWait: 1, sleep }))
+            .rejects.toThrow('Unexpected HTTP response: 504');
+        expect(tc.downloadTool).toHaveBeenCalledTimes(3);
+        expect(core.addPath).not.toHaveBeenCalled();
+    });
+
+    test('does not retry when the download fails with a client error such as 404', async () => {
+        const core = makeCore();
+        const tc = makeTc();
+        const notFound = Object.assign(new Error('Unexpected HTTP response: 404'), { httpStatusCode: 404 });
+        tc.downloadTool.mockRejectedValue(notFound);
+        const sleep = jest.fn().mockResolvedValue(undefined);
+        await expect(downloadAndSetup({ tc, core, downloadUrl: 'https://example/cli', version: '9.9.9', retryCount: 3, retryWait: 1, sleep }))
+            .rejects.toThrow('Unexpected HTTP response: 404');
+        expect(tc.downloadTool).toHaveBeenCalledTimes(1);
+        expect(sleep).not.toHaveBeenCalled();
+    });
+});
+
+describe('runAction — CLI download', () => {
+    test('looks up the resolved version in the tool cache before downloading', async () => {
+        const core = makeCore({ version: '5.9.0' });
+        const tc = makeTc();
+        tc.find.mockReturnValue('/tool-cache/ontrack-cli/5.9.0/x64');
+        await runAction({ core, exec: makeExec(), github: makeGithub(), tc });
+        expect(tc.find).toHaveBeenCalledWith('ontrack-cli', '5.9.0');
+        expect(tc.downloadTool).not.toHaveBeenCalled();
+    });
+
+    test('retries the download as many times as download-retry-count', async () => {
+        const core = makeCore({ version: '5.9.0', 'download-retry-count': '2', 'download-retry-wait': '0' });
+        const tc = makeTc();
+        tc.downloadTool
+            .mockRejectedValueOnce(new Error('read ECONNRESET'))
+            .mockRejectedValueOnce(new Error('socket hang up'))
+            .mockResolvedValueOnce('/tmp/cli-download');
+        await runAction({ core, exec: makeExec(), github: makeGithub(), tc });
+        expect(tc.downloadTool).toHaveBeenCalledTimes(3);
+        expect(core.addPath).toHaveBeenCalled();
+    });
+
+    test('does not retry the download by default', async () => {
+        const core = makeCore({ version: '5.9.0' });
+        const tc = makeTc();
+        tc.downloadTool.mockRejectedValue(new Error('socket hang up'));
+        await expect(runAction({ core, exec: makeExec(), github: makeGithub(), tc })).rejects.toThrow('socket hang up');
+        expect(tc.downloadTool).toHaveBeenCalledTimes(1);
+    });
+
+    test.each([
+        ['download-retry-count', 'abc'],
+        ['download-retry-count', '-1'],
+        ['download-retry-wait', '1.5'],
+    ])('rejects an invalid %s value "%s"', async (input, value) => {
+        const core = makeCore({ version: '5.9.0', [input]: value });
+        const tc = makeTc();
+        await expect(runAction({ core, exec: makeExec(), github: makeGithub(), tc }))
+            .rejects.toThrow(`Input ${input} must be a non-negative integer, got: ${value}`);
+        expect(tc.downloadTool).not.toHaveBeenCalled();
     });
 });
