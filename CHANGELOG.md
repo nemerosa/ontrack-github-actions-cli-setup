@@ -1,3 +1,10 @@
+# [3.1.0](https://github.com/nemerosa/ontrack-github-actions-cli-setup/compare/v3.0.0...v3.1.0) (2026-10-02)
+
+
+### Features
+
+* make the CLI download more tolerant to short GitHub outages ([e3c2ab3](https://github.com/nemerosa/ontrack-github-actions-cli-setup/commit/e3c2ab3fcf9bbdac00489cf8dcd6977b1e4a4726)), closes [#14](https://github.com/nemerosa/ontrack-github-actions-cli-setup/issues/14)
+
 # [3.0.0](https://github.com/nemerosa/ontrack-github-actions-cli-setup/compare/v2.4.1...v3.0.0) (2026-05-05)
 
 
